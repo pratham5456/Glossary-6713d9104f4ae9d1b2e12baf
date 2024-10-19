@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= portalTitle %></title>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+     <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+        }
+
+        .homeMain {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        #search-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #search-input {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #search-results {
+            margin-top: 20px;
+            font-size: 16px;
+        }
+
+        #search-results ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        #search-results ul li {
+            background-color: #fff;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #search-results ul li a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        #content {
+            display: block;
+        }
+
+        nav.alphabet-nav {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        nav.alphabet-nav a {
+            padding: 10px;
+            margin: 0 5px;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .category-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .category-section h2 {
+            margin-bottom: 10px;
+        }
+
+        .category-section ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .category-section ul li {
+            padding: 5px 0;
+        }
+
+        .category-section ul li a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .category-section ul li a:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer styling */
+        footer {
+            background-color: #2c3e50;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        footer a {
+            color: #ecf0f1;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <%- include('/head.ejs') %>
+</head>
+<body>
+    <%- include("/header.ejs") %>
+    <main class="homeMain">
+        <h1><%= portalHeading %></h1>
+        <p><%= portalDescription %></p>
+
+        <div id="search-container">
+            <input type="text" id="search-input" placeholder="<%= searchPlaceholder %>">
+            <div id="search-results"></div>
+        </div>
+
+        <div id="content">
+            <% if (isAlphabetical) { %>
+                <nav class="alphabet-nav">
+                    <% data.forEach(function(category) { %>
+                        <a href="#category-<%= category.categoryName === '#' ? 'numeric' : category.categoryName %>"><%= category.categoryName %></a>
+                    <% }); %>
+                </nav>
+
+                <% data.forEach(function(category) { %>
+                    <div id="category-<%= category.categoryName === '#' ? 'numeric' : category.categoryName %>" class="category-section">
+                        <h2><%= category.categoryName === '#' ? 'Numbers' : category.categoryName %></h2>
+                        <ul>
+                            <% category.pages.forEach(function(page) { %>
+                                <li><a href="<%= page.slug %>"><%= page.pageTitle %></a></li>
+                            <% }); %>
+                        </ul>
+                    </div>
+                <% }); %>
+            <% } else if (showCategories) { %>
+                <% data.forEach(function(category) { %>
+                    <h2><a href="<%= category.categorySlug %>"><%= category.categoryName %></a></h2>
+                    <ul>
+                        <% category.pages.forEach(function(page) { %>
+                            <li><a href="<%= page.slug %>"><%= page.pageTitle %></a></li>
+                        <% }); %>
+                    </ul>
+                <% }); %>
+            <% } else { %>
+                <ul>
+                    <% data[0].pages.forEach(function(page) { %>
+                        <li><a href="<%= page.slug %>"><%= page.pageTitle %></a></li>
+                    <% }); %>
+                </ul>
+            <% } %>
+    </div>
+    </main>
+    <%- include("/footer.ejs") %>
+    <script>
+        // Prepare data for Fuse.js
+        const searchData = [
+            <% data.forEach(function(category) { %>
+                <% category.pages.forEach(function(page) { %>
+                    {
+                        title: '<%= page.pageTitle %>',
+                        category: '<%= category.categoryName %>',
+                        url: '<%= page.slug %>',
+                        content: '<%= page.pageDescription %>'
+                    },
+                <% }); %>
+            <% }); %>
+        ];
+
+        // Initialize Fuse with the search data
+        const fuse = new Fuse(searchData, {
+            keys: ['title', 'category', 'content'],
+            threshold: 0.3,
+            includeScore: true
+        });
+
+        // Search functionality
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        const content = document.getElementById('content');
+
+        searchInput.addEventListener('input', function() {
+            const query = this.value;
+            if (query.length > 2) {
+                const results = fuse.search(query);
+                displayResults(results);
+            } else {
+                searchResults.innerHTML = '';
+                content.style.display = 'block';
+            }
+        });
+
+        function displayResults(results) {
+            if (results.length === 0) {
+                searchResults.innerHTML = '<p>No results found.</p>';
+                content.style.display = 'none';
+                return;
+            }
+
+            let html = '<ul>';
+            results.forEach(result => {
+                html += `<li><a href="${result.item.url}">${result.item.title}</a> (${result.item.category})</li>`;
+            });
+            html += '</ul>';
+
+            searchResults.innerHTML = html;
+            content.style.display = 'none';
+        }
+
+        // Smooth scrolling for alphabet navigation
+        document.querySelectorAll('.alphabet-nav a').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>
